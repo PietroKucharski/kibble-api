@@ -1,0 +1,21 @@
+#!/bin/sh
+# Enforces Conventional Commits without scope parentheses, single line only.
+msg_file="$1"
+lines=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d')
+count=$(printf '%s\n' "$lines" | wc -l)
+
+if [ "$count" -ne 1 ]; then
+  echo "ERROR: commit message must be a single line (no body, lists or trailers)." >&2
+  exit 1
+fi
+
+if ! printf '%s' "$lines" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)!?: [^ ].*$'; then
+  echo "ERROR: use '<type>: <description>' with no parentheses." >&2
+  echo "Types: feat fix docs style refactor perf test build ci chore revert" >&2
+  exit 1
+fi
+
+if printf '%s' "$lines" | grep -Eq '[()]'; then
+  echo "ERROR: parentheses are not allowed in the commit message." >&2
+  exit 1
+fi
