@@ -1,0 +1,14 @@
+#!/bin/sh
+# Enforces branch naming: type/description[-identifier]; no direct commits to main or development.
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ -z "$branch" ]; then exit 0; fi
+
+if [ "$branch" = "main" ] || [ "$branch" = "development" ]; then
+  echo "ERROR: do not commit directly to '$branch'. Create a branch: type/description[-identifier]." >&2
+  exit 1
+fi
+
+if ! printf '%s' "$branch" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)/[a-z0-9]+(-[a-z0-9]+)*$'; then
+  echo "ERROR: branch '$branch' must match type/description[-identifier] (lowercase kebab-case)." >&2
+  exit 1
+fi
