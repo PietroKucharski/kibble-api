@@ -17,3 +17,10 @@
 - Branch name pattern: `type/description[-identifier]`, in lowercase kebab-case (e.g. `feat/user-registration`, `fix/login-error-KIB-12` written as `fix/login-error-kib-12`).
 - `type` must be the same type used in the commit message. `description` is a short summary and `identifier` is an optional ticket or issue id.
 - Enforced locally by `.githooks/pre-commit` and `.githooks/commit-msg`.
+
+# Pull requests
+
+- Every pull request targets `development` and is opened from a branch that follows the branch naming rule.
+- The PR title follows the same Conventional Commits format as the commit message.
+- The PR description must contain these four sections, in this order, each with content: `## What was done`, `## Why`, `## Changes` and `## Impact`.
+- The template in `.github/pull_request_template.md` provides these sections automatically on GitHub.
