@@ -129,17 +129,17 @@ A modelagem é a parte mais importante: se a estrutura do produto estiver certa,
 | --- | --- | --- | --- |
 | `users` | auth | id, nome, email, senha\_hash, perfil, ativo | Senha com BCrypt; perfil: ADMIN, FORMULACAO ou VENDAS |
 | `refresh_tokens` | auth | id, usuario\_id, token\_hash, familia\_id, expira\_em, revogado\_em, substituido\_por | Só o hash SHA-256 do token; a família permite revogar todos os tokens de uma sessão |
-| `nutrients` | ingredient | id, codigo, nome, unidade | Catálogo único: umidade, proteína bruta, extrato etéreo, matéria fibrosa, matéria mineral, cálcio, fósforo |
-| `ingredients` | ingredient | id, codigo, descricao, custo\_kg | Custo de aquisição em `NUMERIC(15,4)` |
+| `nutrients` | ingredient | id, codigo, nome, unidade | Sem `ativo`: o catálogo vem da migração e não tem exclusão. Catálogo único: umidade, proteína bruta, extrato etéreo, matéria fibrosa, matéria mineral, cálcio, fósforo |
+| `ingredients` | ingredient | id, codigo, descricao, custo\_kg, ativo | Custo de aquisição em `NUMERIC(15,4)` |
 | `ingredient_nutrients` | ingredient | id, ingrediente\_id, nutriente\_id, valor\_pct | Composição do ingrediente, um nutriente por linha |
-| `packaging` | packaging | id, codigo, descricao, tipo, capacidade\_kg, custo\_unitario | Saco, pote, etiqueta |
-| `products` | formula | id, codigo, descricao, especie, tipo, categoria, tamanho\_batelada\_kg, umidade\_final\_pct, status\_formula, peso\_liquido\_kg, tamanho\_lote\_envase | Tipo: PREMIX, GRANEL ou SKU; categoria: RACAO ou PETISCO; status\_formula: RASCUNHO ou ATIVA. Batelada, umidade final e status valem para premix e granel; peso líquido e lote de envase (em unidades), para SKU |
+| `packaging` | packaging | id, codigo, descricao, tipo, capacidade\_kg, custo\_unitario, ativo | Saco, pote, etiqueta |
+| `products` | formula | id, codigo, descricao, especie, tipo, categoria, tamanho\_batelada\_kg, umidade\_final\_pct, status\_formula, peso\_liquido\_kg, tamanho\_lote\_envase, ativo | Tipo: PREMIX, GRANEL ou SKU; categoria: RACAO ou PETISCO; status\_formula: RASCUNHO ou ATIVA. `status_formula` diz se a fórmula é válida e `ativo` é a exclusão lógica: são colunas independentes. Batelada, umidade final e status valem para premix e granel; peso líquido e lote de envase (em unidades), para SKU |
 | `formula_items` | formula | id, produto\_id, ingrediente\_id ou premix\_id, percentual | Composição do premix ou do granel; soma = 100% para ativar; cada item é um ingrediente ou um premix |
 | `product_components` | formula | id, produto\_pai\_id, produto\_filho\_id ou embalagem\_id, quantidade | SKU = um granel + embalagens |
 | `nutritional_guarantees` | formula | id, produto\_id, nutriente\_id, minimo\_pct, maximo\_pct | Níveis de garantia do rótulo, ligados ao catálogo de nutrientes |
-| `equipment` | process | id, codigo, descricao, custo\_hora, capacidade\_kg\_hora | Moinho, misturador, extrusora, secador, ensacadeira. `custo_hora` é o custo total da hora: máquina, energia e operador |
+| `equipment` | process | id, codigo, descricao, custo\_hora, capacidade\_kg\_hora, ativo | Moinho, misturador, extrusora, secador, ensacadeira. `custo_hora` é o custo total da hora: máquina, energia e operador |
 | `process_steps` | process | id, produto\_id, equipamento\_id, sequencia, perda\_pct, tempo\_setup\_min | Etapas e perdas do premix, do granel e o ensacamento do SKU |
-| `customers` | customer | id, nome, documento, tipo, email, telefone | Pet shop, agropecuária ou distribuidor |
+| `customers` | customer | id, nome, documento, tipo, email, telefone, ativo | Pet shop, agropecuária ou distribuidor |
 | `budgets` | budget | id, numero, cliente\_id, status, markup\_pct, validade, desatualizado, versao, criado\_por, criado\_em | Status: RASCUNHO, ENVIADO, APROVADO, RECUSADO; `numero` gerado por sequence do banco; `versao` para lock otimista; `desatualizado` marca custo calculado com dados antigos |
 | `budget_items` | budget | id, orcamento\_id, produto\_id, quantidade\_unidades, custo\_ingredientes, custo\_processo, custo\_embalagem, custo\_unitario, custo\_kg, preco\_venda, detalhamento\_custo, invalido | Custo cotado, gravado no momento do cálculo; `detalhamento_custo` em JSONB com o custo por ingrediente, etapa e embalagem; quantidade em unidades do SKU; preço sem impostos |
 
@@ -186,7 +186,7 @@ Comece pelo cadastro mais simples (ingredientes) e use-o como molde para os outr
 - [ ] Editar a fórmula, as garantias ou os componentes de um produto ATIVO volta ele para RASCUNHO e publica `formula.product.changed`.
 - [ ] Estrutura do SKU: exatamente um granel e ao menos uma embalagem. Premix e granel não têm componentes. A capacidade da embalagem precisa ser maior ou igual ao peso líquido do SKU.
 - [ ] Não permitir ciclo na estrutura: um produto não pode, direta ou indiretamente, conter a si mesmo. Exemplo real: um premix não pode conter o granel que usa esse premix.
-- [ ] Ao gravar uma referência a outro módulo (ingrediente na fórmula, nutriente na garantia, embalagem no SKU), validar pela fachada do módulo dono que o ID existe e está ativo, já que não há chave estrangeira entre módulos.
+- [ ] Ao gravar uma referência a outro módulo (ingrediente na fórmula, nutriente na garantia, embalagem no SKU), validar pela fachada do módulo dono que o ID existe e está ativo (no caso do nutriente, só que existe, porque o catálogo não tem exclusão), já que não há chave estrangeira entre módulos.
 - [ ] Desativar ingrediente ou embalagem é sempre permitido. O módulo publica `ingredient.ingredient.deactivated` (ou `packaging.packaging.deactivated`), e o `formula` volta para RASCUNHO as fórmulas e SKUs que usam o item, o que os tira de orçamentos novos. Já um produto usado em outra fórmula ou SKU continua bloqueado (409), porque essa verificação acontece dentro do próprio `formula`.
 - [ ] Código único por cadastro e exclusão lógica (`ativo = false`).
 
